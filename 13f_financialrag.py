@@ -19,11 +19,10 @@ METADATA_FILE = "metadata.json"
 PROCESSED_DATA_FILE = "financial_data_with_embeddings.csv"
 MEMORY_FILE = "chat_memory.json"
 
-GDRIVE_URL = "https://drive.google.com/file/d/1rvFh5LzvIVx-MBPvey6Vf47fVljeKSW6/view?usp=drive_link"  # Replace with your file ID
+GDRIVE_URL = "https://drive.google.com/uc?id=1rvFh5LzvIVx-MBPvey6Vf47fVljeKSW6"  # Correct Google Drive link
 
 def download_faiss_from_drive():
-    if not os.path.exists(FAISS_INDEX_FILE):  
-        print("Downloading FAISS index from Google Drive...")
+    if not os.path.exists(FAISS_INDEX_FILE):  # Download only if not available
         gdown.download(GDRIVE_URL, FAISS_INDEX_FILE, quiet=False)
     
     if os.path.exists(FAISS_INDEX_FILE):
@@ -32,21 +31,24 @@ def download_faiss_from_drive():
     else:
         print("❌ FAISS Index file not found after download.")
 
-
-
 def load_faiss_index():
     try:
         download_faiss_from_drive()
-        if os.path.exists(FAISS_INDEX_FILE):
-            index = faiss.read_index(FAISS_INDEX_FILE)
-            print(f"✅ FAISS Index Loaded (Entries: {index.ntotal})")
-            print(f"FAISS Index Dimension: {index.d}")
-            return index
-        else:
+        if not os.path.exists(FAISS_INDEX_FILE):
             print("❌ FAISS Index file not found.")
+            return None
+        
+        index = faiss.read_index(FAISS_INDEX_FILE)
+        
+        if index and index.is_trained:
+            print(f"✅ FAISS Index Loaded! Entries: {index.ntotal}, Dimension: {index.d}")
+        else:
+            print("❌ FAISS Index loaded but appears empty or untrained.")
+        
+        return index
     except Exception as e:
         print(f"❌ Error loading FAISS Index: {e}")
-    return None
+        return None
 
 # ✅ Load BM25 Corpus
 def load_bm25():
@@ -112,6 +114,8 @@ st.sidebar.write(f"FAISS Index Loaded: {faiss_index is not None}")
 if faiss_index is not None:
     st.sidebar.write(f"Total Entries in FAISS: {faiss_index.ntotal}")
     st.sidebar.write(f"FAISS Index Dimension: {faiss_index.d}")
+else:
+    st.sidebar.write("❌ FAISS Index not loaded correctly.")
 
 # ✅ Initialize Chat History
 if "messages" not in st.session_state:
