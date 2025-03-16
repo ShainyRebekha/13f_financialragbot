@@ -29,19 +29,24 @@ def download_faiss_from_drive():
 def load_faiss_index():
     try:
         download_faiss_from_drive()
-        index = faiss.read_index(FAISS_INDEX_FILE)
-        print(f"✅ FAISS Index Loaded (Entries: {index.ntotal})")
-        return index
+        if os.path.exists(FAISS_INDEX_FILE):
+            index = faiss.read_index(FAISS_INDEX_FILE)
+            print(f"✅ FAISS Index Loaded (Entries: {index.ntotal})")
+            print(f"FAISS Index Dimension: {index.d}")
+            return index
+        else:
+            print("❌ FAISS Index file not found.")
     except Exception as e:
         print(f"❌ Error loading FAISS Index: {e}")
-        return None
+    return None
 
 # ✅ Load BM25 Corpus
 def load_bm25():
     try:
         with open(BM25_FILE, "rb") as f:
             return pickle.load(f)
-    except:
+    except Exception as e:
+        print(f"❌ Error loading BM25 Corpus: {e}")
         return None
 
 # ✅ Load Sentence Transformer Model
@@ -64,20 +69,26 @@ def retrieve_documents(query, top_k=3):
     query = validate_query(query)
     if query is None:
         return []
-
-    df = pd.read_csv(PROCESSED_DATA_FILE)
-    query_embedding = embedder.encode(query).reshape(1, -1)
-    if faiss_index is None:
+    
+    try:
+        df = pd.read_csv(PROCESSED_DATA_FILE)
+        query_embedding = embedder.encode(query).reshape(1, -1)
+        if faiss_index is None:
+            print("❌ FAISS Index not loaded.")
+            return []
+        distances, indices = faiss_index.search(query_embedding, top_k)
+        confidence_scores = np.exp(-distances[0])
+        confidence_scores /= confidence_scores.sum()
+        valid_indices = [i for i in indices[0] if i < len(df)]
+        if not valid_indices:
+            return []
+        retrieved_docs = df.iloc[valid_indices].copy()
+        retrieved_docs["Confidence"] = confidence_scores[:len(valid_indices)]
+        print(f"Retrieved Document Indices: {valid_indices}")
+        return retrieved_docs.to_dict(orient="records")
+    except Exception as e:
+        print(f"❌ Error retrieving documents: {e}")
         return []
-    distances, indices = faiss_index.search(query_embedding, top_k)
-    confidence_scores = np.exp(-distances[0])
-    confidence_scores /= confidence_scores.sum()
-    valid_indices = [i for i in indices[0] if i < len(df)]
-    if not valid_indices:
-        return []
-    retrieved_docs = df.iloc[valid_indices].copy()
-    retrieved_docs["Confidence"] = confidence_scores[:len(valid_indices)]
-    return retrieved_docs.to_dict(orient="records")
 
 # ✅ Initialize Streamlit Chatbot UI
 st.set_page_config(page_title="Financial RAG Chatbot", layout="wide")
@@ -87,6 +98,12 @@ st.title("💰 Financial Chatbot: Ask About 13F-HR Filings")
 embedder = load_embedder()
 faiss_index = load_faiss_index()
 bm25 = load_bm25()
+
+# Display FAISS Status
+st.sidebar.write(f"FAISS Index Loaded: {faiss_index is not None}")
+if faiss_index is not None:
+    st.sidebar.write(f"Total Entries in FAISS: {faiss_index.ntotal}")
+    st.sidebar.write(f"FAISS Index Dimension: {faiss_index.d}")
 
 # ✅ Initialize Chat History
 if "messages" not in st.session_state:
