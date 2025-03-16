@@ -1,9 +1,8 @@
 streamlit
-torch
-faiss-cpu==1.7.4
-sentence-transformers
-rank-bm25
-numpy
-jsonpickle
-gdown
 pandas
+numpy
+torch
+sentence-transformers
+faiss-cpu
+gdown
+rank-bm25
