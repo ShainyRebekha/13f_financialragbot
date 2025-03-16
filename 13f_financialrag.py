@@ -23,8 +23,14 @@ GDRIVE_URL = "https://drive.google.com/file/d/1rvFh5LzvIVx-MBPvey6Vf47fVljeKSW6/
 
 def download_faiss_from_drive():
     if not os.path.exists(FAISS_INDEX_FILE):  # Download only if not available
+        print("Downloading FAISS index from Google Drive...")
         gdown.download(GDRIVE_URL, FAISS_INDEX_FILE, quiet=False)
-        print("✅ FAISS Index downloaded successfully!")
+        
+    if os.path.exists(FAISS_INDEX_FILE):
+        print(f"✅ FAISS Index successfully downloaded: {FAISS_INDEX_FILE}")
+    else:
+        print("❌ Failed to download FAISS index. Check your Google Drive link.")
+
 
 def load_faiss_index():
     try:
