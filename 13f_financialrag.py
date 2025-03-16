@@ -22,14 +22,16 @@ MEMORY_FILE = "chat_memory.json"
 GDRIVE_URL = "https://drive.google.com/file/d/1rvFh5LzvIVx-MBPvey6Vf47fVljeKSW6/view?usp=drive_link"  # Replace with your file ID
 
 def download_faiss_from_drive():
-    if not os.path.exists(FAISS_INDEX_FILE):  # Download only if not available
+    if not os.path.exists(FAISS_INDEX_FILE):  
         print("Downloading FAISS index from Google Drive...")
         gdown.download(GDRIVE_URL, FAISS_INDEX_FILE, quiet=False)
-        
+    
     if os.path.exists(FAISS_INDEX_FILE):
         print(f"✅ FAISS Index successfully downloaded: {FAISS_INDEX_FILE}")
+        print(f"📏 File Size: {os.path.getsize(FAISS_INDEX_FILE)} bytes")
     else:
-        print("❌ Failed to download FAISS index. Check your Google Drive link.")
+        print("❌ FAISS Index file not found after download.")
+
 
 
 def load_faiss_index():
